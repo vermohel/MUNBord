@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Position paper workshop board</title>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --board: #ffffff;
+    --chrome: #e9ecef;
+    --ink: #16181c;
+    --ink-soft: #5c6169;
+    --marker: #1c5bd8;
+    --marker-tint: #eaf1fd;
+    --cover: #c9c5bb;
+    --cover-ink: #3d3a33;
+    --rule: #cfd3d8;
+    --size: 26px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--chrome); color: var(--ink); font-family: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif; font-size: var(--size); line-height: 1.4; }
+  .strip { display: flex; height: 100vh; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scroll-behavior: smooth; scrollbar-width: none; }
+  .strip::-webkit-scrollbar { display: none; }
+  @media (prefers-reduced-motion: reduce) { .strip { scroll-behavior: auto; } }
+  .zone { flex: 0 0 100vw; height: 100vh; scroll-snap-align: start; padding: 40px 64px 110px; background: var(--board); border-right: 12px solid var(--chrome); overflow-y: auto; }
+  .zone h1 { margin: 0 0 24px; font-size: 48px; font-weight: 700; line-height: 1.1; }
+  .zone h1 small { display: block; font-size: 22px; font-weight: 400; color: var(--ink-soft); margin-top: 6px; }
+  .zone h2 { margin: 28px 0 10px; font-size: 30px; font-weight: 700; }
+  .zone p, .zone li { margin: 0 0 10px; }
+  .zone ul, .zone ol { margin: 0 0 12px; padding-left: 36px; }
+  .quiet { color: var(--ink-soft); font-size: 22px; }
+
+  .line { padding: 8px 0; border-bottom: 2px solid var(--rule); }
+  .line:last-child { border-bottom: 0; }
+
+  .live { display: block; min-height: 64px; margin: 8px 0 16px; padding: 10px 14px; border: 3px dashed var(--marker); border-radius: 8px; color: var(--marker); background: var(--marker-tint); outline: none; white-space: pre-wrap; }
+  .live:empty::before { content: attr(data-hint); color: var(--marker); opacity: 0.55; }
+  .live:focus { border-style: solid; }
+
+  .covered { position: relative; }
+  .cover { position: absolute; inset: -6px; background: var(--cover); color: var(--cover-ink); border-radius: 8px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 24px; cursor: pointer; padding: 16px; z-index: 2; border: 0; font-family: inherit; }
+  .cover:hover, .cover:focus-visible { background: #bcb7ac; outline: 3px solid var(--ink); outline-offset: 2px; }
+  .cover.gone { display: none; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 24px; }
+  th, td { border: 2px solid var(--rule); padding: 10px 12px; vertical-align: top; text-align: left; }
+  th { font-weight: 700; background: #f5f6f8; }
+  td .live { margin: 0; min-height: 80px; }
+
+  .card { border: 3px solid var(--ink); border-radius: 10px; padding: 20px 26px; margin-top: 12px; }
+  .card h3 { margin: 12px 0 6px; font-size: 24px; }
+  .card h3:first-child { margin-top: 0; }
+
+  .bad { display: inline-block; padding: 4px 10px; border-radius: 6px; background: #fdecec; color: #8a1f1f; }
+  .good { display: inline-block; padding: 4px 10px; border-radius: 6px; background: #e7f5ec; color: #1d5a33; }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; height: 84px; background: var(--chrome); display: flex; align-items: center; gap: 18px; padding: 0 24px; font-size: 20px; z-index: 5; }
+  .dots { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
+  .dots button { font: inherit; font-size: 18px; min-width: 44px; height: 44px; border-radius: 22px; border: 2px solid var(--ink); background: var(--board); cursor: pointer; padding: 0 12px; }
+  .dots button.on { background: var(--ink); color: var(--board); }
+  .timer { display: flex; align-items: center; gap: 10px; }
+  .timer button { font: inherit; font-size: 18px; height: 44px; border-radius: 8px; border: 2px solid var(--ink); background: var(--board); cursor: pointer; padding: 0 14px; }
+  .timer button:focus-visible, .dots button:focus-visible { outline: 3px solid var(--marker); outline-offset: 2px; }
+  #clock { font-size: 40px; font-weight: 700; min-width: 120px; text-align: center; font-variant-numeric: tabular-nums; }
+  #clock.done { color: #b42323; }
+  .nav { display: flex; gap: 8px; }
+  .nav button { font: inherit; font-size: 22px; width: 56px; height: 44px; border-radius: 8px; border: 2px solid var(--ink); background: var(--board); cursor: pointer; }
+
+  @media (max-width: 900px) {
+    :root { --size: 20px; }
+    .zone { padding: 24px 24px 130px; }
+    .zone h1 { font-size: 34px; }
+    .two { grid-template-columns: 1fr; gap: 12px; }
+    .bar { height: 104px; flex-wrap: wrap; gap: 8px; padding: 8px 12px; }
+    #clock { font-size: 30px; min-width: 90px; }
+  }
+</style>
+</head>
+<body>
+
+<main class="strip" id="strip">
+
+  <section class="zone" id="z0">
+    <h1>Position paper workshop<small>Teacher screen. Move to zone 1 when the room is ready.</small></h1>
+    <div class="two">
+      <div>
+        <h2>Keys</h2>
+        <ul>
+          <li>Right and left arrows move between zones.</li>
+          <li>Click a grey block to uncover it.</li>
+          <li>Click a blue dashed box and type. Enter makes a new line.</li>
+          <li>Timer: pick minutes at the bottom, press Start.</li>
+        </ul>
+        <p class="quiet">Nothing is saved if you refresh. Keep this tab open for the whole session.</p>
+      </div>
+      <div>
+        <h2>Zones</h2>
+        <ol>
+          <li>Opening, 2 min</li><li>Assignment card, 2 min</li><li>Sections, 4 min</li><li>Voice, 1 min</li><li>Research, 2 min</li><li>Solutions, 5 min</li><li>Mistakes, 2 min</li><li>Write and pair check, 6 min</li><li>Final check, 5 min</li><li>Close, 1 min</li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <section class="zone" id="z1">
+    <h1>1. What is a position paper?<small>2 minutes</small></h1>
+    <div class="card">
+      <p>Position paper = one page, your country's answer to one question:</p>
+      <p><strong>What should this committee do about this topic, and why?</strong></p>
+    </div>
+    <h2>Who reads it</h2>
+    <ol>
+      <li>Chairs. They grade it and use it to spot who prepared.</li>
+      <li>Other delegates. They read it to find allies.</li>
+    </ol>
+    <p class="quiet">Ask: who reads it, and why? Move on when someone gives both.</p>
+  </section>
+
+  <section class="zone" id="z2">
+    <h1>2. Your assignment<small>2 minutes. Everything you write today is for this card.</small></h1>
+    <div class="covered">
+      <button class="cover">Assignment card. Click to uncover.</button>
+      <div class="card">
+        <h3>Committee</h3><p>OPEC (Organization of the Petroleum Exporting Countries)</p>
+        <h3>Topic</h3><p>Oil supply crisis after the closure of the Strait of Hormuz</p>
+        <h3>Questions the committee must answer</h3>
+        <ol>
+          <li>How should OPEC decide which members make up the barrels lost while the Strait is closed?</li>
+          <li>Should members whose shortfall is not their fault be treated differently from members who chose to cut?</li>
+          <li>Who pays for emergency measures, and by what formula?</li>
+        </ol>
+        <h3>Your country: Saudi Arabia</h3>
+        <div class="two">
+          <div>
+            <p><strong>Facts with numbers</strong></p>
+            <ul>
+              <li>About 267 billion barrels of proven reserves, second in OPEC after Venezuela.</li>
+              <li>Produces around 9 million barrels a day; can produce about 12 million. Roughly 3 million a day of spare capacity, the most of any member.</li>
+              <li>Owns the East-West Pipeline to Yanbu on the Red Sea, about 7 million barrels a day, which bypasses Hormuz.</li>
+            </ul>
+          </div>
+          <div>
+            <p><strong>What it has done</strong></p>
+            <ul>
+              <li>After the September 2019 Abqaiq attack cut output by about 5.7 million barrels a day, it restored full production within weeks.</li>
+              <li>Led OPEC+ voluntary production cuts since 2022.</li>
+              <li>Expanded the East-West Pipeline for exactly this kind of emergency.</li>
+            </ul>
+            <p><strong>Won't accept</strong></p>
+            <p>Any rule that takes production share from members who can produce and hands it to members who cannot, or that lets OPEC order Saudi spare capacity into use.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="zone" id="z3">
+    <h1>3. The four sections<small>4 minutes. Always this order.</small></h1>
+    <table>
+      <tr><th style="width:26%">Section</th><th>What goes in it</th><th style="width:24%">Length</th></tr>
+      <tr><td>Heading</td><td>Committee, topic, country, your name, school</td><td><div class="live" contenteditable="true" data-hint="type"></div></td></tr>
+      <tr><td>1. Background</td><td>The problem, seen from your country, with 2 or 3 numbers</td><td><div class="live" contenteditable="true" data-hint="type"></div></td></tr>
+      <tr><td>2. Past action</td><td>What OPEC, the UN, or your country already did, dated</td><td><div class="live" contenteditable="true" data-hint="type"></div></td></tr>
+      <tr><td>3. Country position</td><td>What your country believes, what it refuses</td><td><div class="live" contenteditable="true" data-hint="type"></div></td></tr>
+      <tr><td>4. Proposed solutions</td><td>One or two solutions, each answering the four questions in zone 6</td><td><div class="live" contenteditable="true" data-hint="type"></div></td></tr>
+      <tr><td><strong>Total</strong></td><td>One page per topic</td><td><div class="live" contenteditable="true" data-hint="type"></div></td></tr>
+    </table>
+    <p class="quiet" style="margin-top:14px">Lengths to type: 4 lines; 100 to 130; 80 to 110; 80 to 110; 150 to 220; 450 to 600 words.</p>
+  </section>
+
+  <section class="zone" id="z4">
+    <h1>4. Voice<small>1 minute</small></h1>
+    <div class="card">
+      <p class="line">Never I, we, our.</p>
+      <p class="line">The speaker is <strong>the delegation of Saudi Arabia</strong>.</p>
+      <p class="line">The words Saudi Arabia appear in every paragraph.</p>
+      <p class="line">Verbs that work: proposes, urges, believes, recognizes, will not support.</p>
+    </div>
+    <h2>Rewrite this</h2>
+    <p><span class="bad">We believe our pipeline should be used by everyone.</span></p>
+    <div class="live" contenteditable="true" data-hint="Type the room's rewrite here"></div>
+    <div class="covered">
+      <button class="cover">60-minute version: three more lines. Click to uncover.</button>
+      <div class="card">
+        <p><span class="bad">I think the crisis is bad for everyone.</span></p>
+        <p><span class="bad">Our reserves are the second largest.</span></p>
+        <p><span class="bad">We won't accept losing our share.</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="zone" id="z5">
+    <h1>5. How to research<small>2 minutes</small></h1>
+    <div class="two">
+      <div>
+        <h2>Read in this order</h2>
+        <ol>
+          <li>The study guide. Go to the questions first.</li>
+          <li>Your country's numbers on this topic.</li>
+          <li>What your country did or said.</li>
+          <li>What the committee already decided.</li>
+        </ol>
+      </div>
+      <div>
+        <h2>Write down</h2>
+        <p>One line per fact: fact + number or date + source.</p>
+        <h2>Stop when</h2>
+        <p>One sentence per committee question, 3 numbers, 2 past actions. About 2 hours.</p>
+      </div>
+    </div>
+    <h2>Example note</h2>
+    <div class="live" contenteditable="true" data-hint="Proven reserves 303 bn bbl, OPEC Annual Statistical Bulletin"></div>
+  </section>
+
+  <section class="zone" id="z6">
+    <h1>6. Solutions: four questions<small>5 minutes. A wish becomes a solution when all four are answered.</small></h1>
+    <table>
+      <tr><th style="width:24%">Question</th><th style="width:38%">A. Venezuela (model)</th><th>B. Saudi Arabia (yours)</th></tr>
+      <tr>
+        <td>What exactly?</td>
+        <td class="covered"><button class="cover">Click to uncover column A</button>A Supply Shock Compensation Fund</td>
+        <td><div class="live" contenteditable="true" data-hint="type"></div></td>
+      </tr>
+      <tr>
+        <td>Who runs it? (existing body)</td>
+        <td>OPEC's existing Joint Ministerial Monitoring Committee</td>
+        <td><div class="live" contenteditable="true" data-hint="type"></div></td>
+      </tr>
+      <tr>
+        <td>Who pays, by what formula?</td>
+        <td>When prices spike, every member pays a small levy on the windfall (the extra revenue from the price jump)</td>
+        <td><div class="live" contenteditable="true" data-hint="type"></div></td>
+      </tr>
+      <tr>
+        <td>Who checks, how often, with what consequence?</td>
+        <td>The Monitoring Committee, monthly, using production data OPEC already collects. Proven involuntary shortfalls get paid; others do not.</td>
+        <td><div class="live" contenteditable="true" data-hint="type"></div></td>
+      </tr>
+    </table>
+  </section>
+
+  <section class="zone" id="z7">
+    <h1>7. Mistakes that cost the most<small>2 minutes</small></h1>
+    <ol>
+      <li><strong>Generic background, country appears late.</strong> Fix: country in sentence one.</li>
+      <li><strong>I, we, our.</strong> Fix: the delegation of.</li>
+      <li><strong>No numbers.</strong> Fix: three minimum.</li>
+      <li><strong>Solution with no runner, no formula, no check.</strong> Fix: the four questions.</li>
+    </ol>
+    <h2>Which mistake is this?</h2>
+    <p><span class="bad">We think OPEC should work together to solve the crisis.</span></p>
+    <div class="covered">
+      <button class="cover">60-minute version: six more mistakes. Click to uncover.</button>
+      <ol start="5">
+        <li>Saying what the world should do, not what your country wants.</li>
+        <li>Inventing a new body when one exists.</li>
+        <li>Copying study guide sentences.</li>
+        <li>Ignoring the committee's questions.</li>
+        <li>Contradicting your country's real behavior.</li>
+        <li>Vague verbs: address, tackle, raise awareness.</li>
+      </ol>
+    </div>
+  </section>
+
+  <section class="zone" id="z8">
+    <h1>8. Write one solution paragraph<small>4 minutes solo, then swap and check for 2</small></h1>
+    <div class="two">
+      <div>
+        <h2>Your paragraph</h2>
+        <p>As the delegation of Saudi Arabia. Use column B from zone 6. Four to six sentences. First words: <strong>The delegation of Saudi Arabia proposes</strong></p>
+      </div>
+      <div>
+        <h2>Pair check: tick each</h2>
+        <ol>
+          <li>Starts with "The delegation of Saudi Arabia"</li>
+          <li>No I, we, our</li>
+          <li>Names the thing</li>
+          <li>Names an existing body that runs it</li>
+          <li>Says who pays and by what formula</li>
+          <li>Says who checks, how often, and what happens to a cheater</li>
+        </ol>
+      </div>
+    </div>
+    <div class="covered">
+      <button class="cover">One possible version. Uncover only after the pair check.</button>
+      <div class="card">
+        <p>The delegation of Saudi Arabia proposes an Emergency Red Sea Routing Agreement under which member states export through the Saudi East-West Pipeline to Yanbu while the Strait of Hormuz is closed. The existing OPEC Joint Ministerial Monitoring Committee would allocate pipeline slots each month in proportion to each member's lost export volume. Members using the route would pay a per-barrel transit fee, set by the Secretariat at the pipeline's operating cost plus 5 percent, so that Saudi Arabia does not carry the cost alone. The Monitoring Committee would review routed volumes every month against OPEC's own secondary-source production data, and any member found routing barrels above its declared shortfall would lose its slot for the following month.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="zone" id="z9">
+    <h1>9. Final check<small>3 minutes writing, alone</small></h1>
+    <div class="covered">
+      <button class="cover">Final check prompt. Click to uncover.</button>
+      <div class="card">
+        <p>Saudi Arabia, question 3: <strong>who pays for emergency measures, and by what formula?</strong></p>
+        <p>Four short lines:</p>
+        <ol>
+          <li>What</li>
+          <li>Who runs it</li>
+          <li>Who pays, and the formula</li>
+          <li>Who checks, and the consequence</li>
+        </ol>
+        <p>Hold your notebook up when done.</p>
+      </div>
+    </div>
+    <p class="quiet" style="margin-top:20px">Scoring for you: 4 lines complete = got it. 2 or 3 = nearly. 0 or 1 = redo with you this week. Beginners drop formula and consequence.</p>
+  </section>
+
+  <section class="zone" id="z10">
+    <h1>10. Take home<small>1 minute</small></h1>
+    <div class="card">
+      <p class="line">One page: what your country wants, and why.</p>
+      <p class="line">Country in every paragraph, first sentence first.</p>
+      <p class="line">Every solution: what, who runs, who pays, who checks.</p>
+    </div>
+    <h2>Homework</h2>
+    <p>Write the full Saudi Arabia paper from today's card. Four sections, one page. Send it by Sunday.</p>
+  </section>
+
+</main>
+
+<div class="bar">
+  <div class="nav">
+    <button id="prev" aria-label="Previous zone">&#8592;</button>
+    <button id="next" aria-label="Next zone">&#8594;</button>
+  </div>
+  <div class="dots" id="dots"></div>
+  <div class="timer">
+    <button data-min="2">2</button>
+    <button data-min="3">3</button>
+    <button data-min="4">4</button>
+    <button data-min="5">5</button>
+    <div id="clock">0:00</div>
+    <button id="startstop">Start</button>
+  </div>
+</div>
+
+<script>
+  var strip = document.getElementById('strip');
+  var zones = Array.prototype.slice.call(document.querySelectorAll('.zone'));
+  var dots = document.getElementById('dots');
+  var current = 0;
+
+  zones.forEach(function (z, i) {
+    var b = document.createElement('button');
+    b.textContent = i === 0 ? 'Start' : String(i);
+    b.setAttribute('aria-label', 'Go to zone ' + i);
+    b.addEventListener('click', function () { go(i); });
+    dots.appendChild(b);
+  });
+
+  function go(i) {
+    current = Math.max(0, Math.min(zones.length - 1, i));
+    strip.scrollTo({ left: current * window.innerWidth });
+    Array.prototype.forEach.call(dots.children, function (d, k) { d.classList.toggle('on', k === current); });
+  }
+  document.getElementById('prev').addEventListener('click', function () { go(current - 1); });
+  document.getElementById('next').addEventListener('click', function () { go(current + 1); });
+  document.addEventListener('keydown', function (e) {
+    if (document.activeElement && document.activeElement.isContentEditable) return;
+    if (e.key === 'ArrowRight') go(current + 1);
+    if (e.key === 'ArrowLeft') go(current - 1);
+  });
+  window.addEventListener('resize', function () { go(current); });
+
+  document.querySelectorAll('.cover').forEach(function (c) {
+    c.addEventListener('click', function () { c.classList.add('gone'); });
+  });
+
+  var clock = document.getElementById('clock');
+  var startstop = document.getElementById('startstop');
+  var total = 0, left = 0, tick = null;
+  function show() {
+    var m = Math.floor(left / 60), s = left % 60;
+    clock.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+    clock.classList.toggle('done', total > 0 && left === 0);
+  }
+  document.querySelectorAll('.timer button[data-min]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      clearInterval(tick); tick = null;
+      total = left = parseInt(b.getAttribute('data-min'), 10) * 60;
+      startstop.textContent = 'Start';
+      show();
+    });
+  });
+  startstop.addEventListener('click', function () {
+    if (tick) { clearInterval(tick); tick = null; startstop.textContent = 'Start'; return; }
+    if (left === 0) { left = total; }
+    if (left === 0) return;
+    startstop.textContent = 'Pause';
+    tick = setInterval(function () {
+      left -= 1;
+      if (left <= 0) { left = 0; clearInterval(tick); tick = null; startstop.textContent = 'Start'; }
+      show();
+    }, 1000);
+  });
+  show();
+  go(0);
+</script>
+</body>
+</html>
